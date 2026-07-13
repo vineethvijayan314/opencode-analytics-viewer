@@ -3,7 +3,7 @@
 Reads the local OpenCode database. JSON `data` on assistant messages stores
 cost and token counts; `part` rows on parent user messages store prompt text.
 
-Run: uvicorn app:app --reload --port 8000
+Run: uvicorn app:app --reload --port 7123
 """
 
 import json

@@ -2,9 +2,9 @@
 
 ## Run
 
-- Backend: `.venv/bin/uvicorn app:app --reload --port 8000`.
+- Backend: `.venv/bin/uvicorn app:app --reload --port 7123`.
 - Frontend: `npm --prefix frontend run dev` serves Vite on `http://localhost:5173`.
-- `frontend/src/Dashboard.tsx` currently requests the API on port `7123`, while `app.py` documents port `8000`. Keep these ports aligned when changing startup/configuration.
+- The dashboard and API use port `7123` by default. Keep them aligned when changing startup/configuration.
 
 ## Architecture
 

@@ -46,7 +46,7 @@ Windows PowerShell:
 .\run.ps1
 ```
 
-Open `http://localhost:5173`. The API runs on `http://localhost:8000`.
+Open `http://localhost:5173`. The API runs on `http://localhost:7123`.
 
 To use another API address, set `VITE_API_URL` before starting Vite.
 

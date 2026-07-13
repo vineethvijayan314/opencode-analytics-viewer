@@ -115,7 +115,7 @@ const MODEL_COLORS = [
   "#4f46e5", "#be185d", "#047857", "#c2410c", "#1d4ed8", "#6d28d9",
 ];
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:7123";
 const API_URL = `${API_BASE_URL}/api/metrics`;
 const RTK_URL = `${API_BASE_URL}/api/rtk-savings`;
 const GRAPHIFY_URL = `${API_BASE_URL}/api/graphify-stats`;
@@ -195,6 +195,8 @@ export default function Dashboard() {
       `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     if (p === "all") {
       setStartDate(""); setEndDate("");
+    } else if (p === "today") {
+      setStartDate(fmt(today)); setEndDate(fmt(today));
     } else if (p === "this_week") {
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
@@ -498,6 +500,7 @@ export default function Dashboard() {
         <div className="mt-6 flex flex-wrap gap-2">
           {[
             { id: "all", label: "All time" },
+            { id: "today", label: "Today" },
             { id: "this_week", label: "This week" },
             { id: "this_month", label: "This month" },
             { id: "last_month", label: "Last month" },
