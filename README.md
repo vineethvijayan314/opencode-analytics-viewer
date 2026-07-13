@@ -1,58 +1,119 @@
-# OpenCode Analytics
+# OpenCode Analytics Viewer
 
-Read-only local analytics for OpenCode usage, cost, projects, RTK, and Graphify.
+A local, read-only dashboard and OpenCode TUI plugin for usage, cost, projects, RTK savings, and Graphify statistics.
 
-Works on macOS, Linux, and Windows with OpenCode `>=1.17.18`. It reads your own local OpenCode database and does not send its contents anywhere.
+Current version: `0.1.0` (unreleased). See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
+The dashboard reads the OpenCode database on your machine. It does not upload prompts, token data, costs, or database contents.
+
+## What You Get
+
+- Browser dashboard at `http://localhost:5173`
+- Cost, token, model, project, and query-history views
+- Date filters for today, this week, month, and longer ranges
+- Optional RTK and Graphify sections when those tools are installed
+- OpenCode sidebar cost totals for today, this Monday-start week, and month
+- OpenCode footer total for today
+- `analytics` tool for agent cost, token, and response totals
 
 ## Requirements
 
-- OpenCode `>=1.17.18`
-- Node.js `>=20`
+- OpenCode `>=1.17.18` for the optional TUI plugin
+- Node.js `>=20` and npm
 - Python `>=3.10`
+- Git, if cloning from a repository
+
+RTK and Graphify are optional. The dashboard works without either; their sections are simply hidden.
 
 ## Install
 
-Clone this repository, then run one command from its root.
-
-macOS/Linux:
+Clone the repository and enter it:
 
 ```bash
+git clone <repository-url> opencode-analytics-viewer
+cd opencode-analytics-viewer
+```
+
+### macOS and Linux
+
+Make the helper scripts executable once, then install dependencies:
+
+```bash
+chmod +x install.sh run.sh
 ./install.sh
 ```
 
-Windows PowerShell:
+### Windows PowerShell
+
+Run:
 
 ```powershell
 .\install.ps1
 ```
 
-If PowerShell blocks local scripts, run:
+If PowerShell blocks local scripts, allow scripts only for the current terminal and run the installer again:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
 ```
 
-## Start Dashboard
+The installer creates `.venv`, installs FastAPI/Uvicorn, and installs frontend and plugin Node dependencies.
 
-macOS/Linux:
+## Update
+
+Updates require a Git clone of this repository. Stop the dashboard and OpenCode first, then run:
+
+### macOS and Linux
+
+```bash
+./update.sh
+```
+
+### Windows PowerShell
+
+```powershell
+.\update.ps1
+```
+
+The update script fast-forwards to the latest release on the current branch and reruns dependency installation. Restart the dashboard and OpenCode afterward.
+
+## Start the Dashboard
+
+### macOS and Linux
 
 ```bash
 ./run.sh
 ```
 
-Windows PowerShell:
+### Windows PowerShell
 
 ```powershell
 .\run.ps1
 ```
 
-Open `http://localhost:5173`. The API runs on `http://localhost:7123`.
+Then open `http://localhost:5173`.
 
-To use another API address, set `VITE_API_URL` before starting Vite.
+The helper starts:
 
-## Enable OpenCode Plugin
+- FastAPI API: `http://localhost:7123`
+- Vite dashboard: `http://localhost:5173`
 
-Add the server plugin to your OpenCode config (`~/.config/opencode/opencode.jsonc` on macOS/Linux):
+Stop both processes with `Ctrl+C`.
+
+## Enable the OpenCode Plugin
+
+The dashboard does not require the plugin. Install this only to show analytics in OpenCode’s sidebar/footer and expose the `analytics` tool.
+
+The config files are usually:
+
+- macOS/Linux server config: `~/.config/opencode/opencode.jsonc`
+- macOS/Linux TUI config: `~/.config/opencode/tui.json`
+
+Add the plugin entries to your existing config. Do not replace other plugins or configuration fields.
+
+### Server Plugin
+
+Add the repository's absolute plugin directory to `plugin` in `opencode.jsonc`:
 
 ```jsonc
 {
@@ -62,7 +123,9 @@ Add the server plugin to your OpenCode config (`~/.config/opencode/opencode.json
 }
 ```
 
-Add the TUI plugin to your OpenCode TUI config (`~/.config/opencode/tui.json` on macOS/Linux):
+### TUI Plugin
+
+Add the TUI source file to `plugin` in `tui.json`, then enable its ID:
 
 ```json
 {
@@ -75,13 +138,58 @@ Add the TUI plugin to your OpenCode TUI config (`~/.config/opencode/tui.json` on
 }
 ```
 
-On Windows, use the equivalent paths under your OpenCode config directory and a valid file URL, such as `file:///C:/Users/name/path/to/opencode-analytics-plugin/tui.tsx`.
+On Windows, use your OpenCode configuration directory and a file URL with forward slashes:
 
-Quit and restart OpenCode. The plugin shows global costs in the sidebar and footer, refreshing every five seconds. The `analytics` tool returns matching cost, token, and response totals.
+```text
+file:///C:/Users/your-name/path/to/opencode-analytics-viewer/opencode-analytics-plugin/tui.tsx
+```
 
-## Verify
+Quit and restart OpenCode after editing its config. The TUI plugin refreshes displayed costs every five seconds.
+
+## Optional Tools
+
+### RTK
+
+If `rtk` is on your `PATH`, the dashboard displays RTK token-savings data. If it is absent, the rest of the dashboard remains available.
+
+### Graphify
+
+If `graphify` is on your `PATH`, the dashboard searches for `graphify-out/graph.json` beneath `~/work` and shows graph statistics. If it is absent or no graphs exist, that section is hidden.
+
+## Configuration
+
+The frontend expects the API at `http://localhost:7123` by default. To use a different API address, set `VITE_API_URL` before starting the frontend.
+
+macOS/Linux example:
+
+```bash
+VITE_API_URL=http://localhost:9000 npm --prefix frontend run dev
+```
+
+Windows PowerShell example:
+
+```powershell
+$env:VITE_API_URL = "http://localhost:9000"
+npm --prefix frontend run dev
+```
+
+## Troubleshooting
+
+| Problem | Check |
+| --- | --- |
+| Dashboard says it cannot reach the API | Run `./run.sh` or `.\run.ps1`; confirm `http://localhost:7123/api/metrics` responds. |
+| Dashboard has no data | OpenCode must have created its local database by running at least one session. |
+| Sidebar/footer not visible | Verify both plugin config entries, then completely quit and restart OpenCode. |
+| RTK or Graphify section missing | This is expected unless the corresponding command is installed and available on `PATH`. |
+| Port `7123` is already in use | Stop the process using it or set `VITE_API_URL` and start Uvicorn on another matching port. |
+
+## Verify Changes
 
 ```bash
 npm --prefix frontend run build
 npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node --skipLibCheck opencode-analytics-plugin/server.ts opencode-analytics-plugin/tui.tsx
 ```
+
+## Privacy
+
+All dashboard calls target `localhost`. The app opens the OpenCode SQLite database in read-only mode and does not add data, run migrations, or transmit analytics externally.
