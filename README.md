@@ -1,60 +1,73 @@
 # OpenCode Analytics
 
-Read-only analytics for the local OpenCode database.
+Read-only local analytics for OpenCode usage, cost, projects, RTK, and Graphify.
 
-- Browser dashboard: usage, cost, project spend, RTK, and Graphify data.
-- OpenCode plugin: global cost totals in the sidebar and an `analytics` agent tool.
+Works on macOS, Linux, and Windows with OpenCode `>=1.17.18`. It reads your own local OpenCode database and does not send its contents anywhere.
 
 ## Requirements
 
-- OpenCode `>=1.17.18` for the sidebar plugin.
-- Python environment with FastAPI and Uvicorn for the dashboard API.
-- Node.js dependencies installed in `frontend/` and `opencode-analytics-plugin/`.
+- OpenCode `>=1.17.18`
+- Node.js `>=20`
+- Python `>=3.10`
 
-The application reads `~/.local/share/opencode/opencode.db` in read-only mode. Costs and sidebar totals aggregate all OpenCode projects.
+## Install
 
-## Dashboard
+Clone this repository, then run one command from its root.
 
-Start the API:
-
-```bash
-.venv/bin/uvicorn app:app --reload --port 8000
-```
-
-Start the frontend:
+macOS/Linux:
 
 ```bash
-npm --prefix frontend run dev
+./install.sh
 ```
 
-Vite serves the dashboard at `http://localhost:5173`.
+Windows PowerShell:
 
-The frontend currently requests the API at port `7123`; change `API_URL`, `RTK_URL`, `GRAPHIFY_URL`, and `PROJECT_SPEND_URL` in `frontend/src/Dashboard.tsx` to port `8000`, or run the API on `7123` instead.
+```powershell
+.\install.ps1
+```
 
-## OpenCode Sidebar Plugin
+If PowerShell blocks local scripts, run:
 
-Install plugin dependencies:
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+```
+
+## Start Dashboard
+
+macOS/Linux:
 
 ```bash
-npm --prefix opencode-analytics-plugin install
+./run.sh
 ```
 
-Register the package in `~/.config/opencode/opencode.jsonc` for the server tool:
+Windows PowerShell:
+
+```powershell
+.\run.ps1
+```
+
+Open `http://localhost:5173`. The API runs on `http://localhost:8000`.
+
+To use another API address, set `VITE_API_URL` before starting Vite.
+
+## Enable OpenCode Plugin
+
+Add the server plugin to your OpenCode config (`~/.config/opencode/opencode.jsonc` on macOS/Linux):
 
 ```jsonc
 {
   "plugin": [
-    "file:///absolute/path/to/opencode-analytics-plugin"
+    "file:///absolute/path/to/opencode-analytics-viewer/opencode-analytics-plugin"
   ]
 }
 ```
 
-Register the same package in `~/.config/opencode/tui.json` for the sidebar:
+Add the TUI plugin to your OpenCode TUI config (`~/.config/opencode/tui.json` on macOS/Linux):
 
 ```json
 {
   "plugin": [
-    "file:///absolute/path/to/opencode-analytics-plugin"
+    "file:///absolute/path/to/opencode-analytics-viewer/opencode-analytics-plugin/tui.tsx"
   ],
   "plugin_enabled": {
     "opencode-analytics-sidebar": true
@@ -62,7 +75,9 @@ Register the same package in `~/.config/opencode/tui.json` for the sidebar:
 }
 ```
 
-Quit and restart OpenCode. The sidebar shows global cost for today, this Monday-start week, and this month. The agent can call the `analytics` tool for matching cost, token, and response totals.
+On Windows, use the equivalent paths under your OpenCode config directory and a valid file URL, such as `file:///C:/Users/name/path/to/opencode-analytics-plugin/tui.tsx`.
+
+Quit and restart OpenCode. The plugin shows global costs in the sidebar and footer, refreshing every five seconds. The `analytics` tool returns matching cost, token, and response totals.
 
 ## Verify
 

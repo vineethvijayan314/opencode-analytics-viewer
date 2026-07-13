@@ -115,10 +115,11 @@ const MODEL_COLORS = [
   "#4f46e5", "#be185d", "#047857", "#c2410c", "#1d4ed8", "#6d28d9",
 ];
 
-const API_URL = "http://localhost:7123/api/metrics";
-const RTK_URL = "http://localhost:7123/api/rtk-savings";
-const GRAPHIFY_URL = "http://localhost:7123/api/graphify-stats";
-const PROJECT_SPEND_URL = "http://localhost:7123/api/project-spend";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_URL = `${API_BASE_URL}/api/metrics`;
+const RTK_URL = `${API_BASE_URL}/api/rtk-savings`;
+const GRAPHIFY_URL = `${API_BASE_URL}/api/graphify-stats`;
+const PROJECT_SPEND_URL = `${API_BASE_URL}/api/project-spend`;
 
 // ---------- Formatting helpers ----------
 
@@ -194,6 +195,10 @@ export default function Dashboard() {
       `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     if (p === "all") {
       setStartDate(""); setEndDate("");
+    } else if (p === "this_week") {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      setStartDate(fmt(weekStart)); setEndDate(fmt(today));
     } else if (p === "this_month") {
       setStartDate(fmt(new Date(today.getFullYear(), today.getMonth(), 1)));
       setEndDate(fmt(today));
@@ -217,10 +222,9 @@ export default function Dashboard() {
       try {
         setLoading(true);
         setError(null);
-        const [res, rtkRes, graphifyRes, projectSpendRes] = await Promise.all([
+        const [res, rtkRes, projectSpendRes] = await Promise.all([
           fetch(API_URL, { signal: controller.signal }),
           fetch(RTK_URL, { signal: controller.signal }).catch(() => null),
-          fetch(GRAPHIFY_URL, { signal: controller.signal }).catch(() => null),
           fetch(PROJECT_SPEND_URL, { signal: controller.signal }).catch(() => null),
         ]);
         if (!res.ok) {
@@ -235,10 +239,6 @@ export default function Dashboard() {
           setRtkWeekly(rtkData.weekly ?? []);
           setRtkDaily(rtkData.daily ?? []);
         }
-        if (graphifyRes?.ok) {
-          const gData: GraphifyStatsResponse = await graphifyRes.json();
-          setGraphifyStats(gData);
-        }
         if (projectSpendRes?.ok) {
           const pData: ProjectSpendResponse = await projectSpendRes.json();
           setProjectSpend(pData.projects);
@@ -246,7 +246,7 @@ export default function Dashboard() {
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
         setError(
-          "Cannot reach the Python API at localhost:7123. Is the FastAPI server running?",
+          `Cannot reach the Python API at ${API_BASE_URL}. Is the FastAPI server running?`,
         );
       } finally {
         setLoading(false);
@@ -254,6 +254,10 @@ export default function Dashboard() {
     }
 
     load();
+    fetch(GRAPHIFY_URL, { signal: controller.signal })
+      .then((res) => res.ok ? res.json() as Promise<GraphifyStatsResponse> : null)
+      .then((data) => data && setGraphifyStats(data))
+      .catch(() => undefined);
     return () => controller.abort();
   }, []);
 
@@ -295,7 +299,10 @@ export default function Dashboard() {
     let todayQueries = 0, previousQueries = 0;
     let todayInput = 0, todayOutput = 0;
     let previousInput = 0, previousOutput = 0;
-    let thisMonthSpend = 0, lastMonthSpend = 0;
+    let thisWeekSpend = 0, thisMonthSpend = 0, lastMonthSpend = 0;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const weekStartKey = fmt(weekStart);
     const thisMonthKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastMonthKey = `${lastMonth.getFullYear()}-${pad(lastMonth.getMonth() + 1)}`;
@@ -313,6 +320,7 @@ export default function Dashboard() {
       }
       if (e.date.startsWith(thisMonthKey)) thisMonthSpend += e.cost;
       if (e.date.startsWith(lastMonthKey)) lastMonthSpend += e.cost;
+      if (e.date >= weekStartKey && e.date <= todayKey) thisWeekSpend += e.cost;
     }
     const spendPct = previousSpend > 0 ? ((todaySpend - previousSpend) / previousSpend) * 100 : null;
     const queriesPct = previousQueries > 0 ? ((todayQueries - previousQueries) / previousQueries) * 100 : null;
@@ -325,10 +333,53 @@ export default function Dashboard() {
       queries: todayQueries, queriesPct,
       tokens: todayTokens, tokensPct,
       input: todayInput, output: todayOutput,
+      thisWeekSpend,
       thisMonthSpend, lastMonthSpend, monthSpendPct,
       previousUsageDate, previousSpend, previousQueries, previousTokens,
     };
   }, [entries]);
+
+  const highlights = useMemo(() => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const thisWeekStart = new Date(now);
+    thisWeekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+    const thisWeekStartKey = fmt(thisWeekStart);
+    const lastWeekStartKey = fmt(lastWeekStart);
+    let thisWeekSpend = 0;
+    let lastWeekSpend = 0;
+    const models = new Map<string, { queries: number; cost: number }>();
+
+    for (const entry of entries) {
+      if (entry.date >= thisWeekStartKey) thisWeekSpend += entry.cost;
+      else if (entry.date >= lastWeekStartKey) lastWeekSpend += entry.cost;
+
+      const model = entry.model || "(unknown)";
+      const value = models.get(model) ?? { queries: 0, cost: 0 };
+      models.set(model, { queries: value.queries + 1, cost: value.cost + entry.cost });
+    }
+
+    const topModel = Array.from(models.entries())
+      .map(([model, value]) => ({ model, ...value }))
+      .sort((a, b) => b.queries - a.queries)[0];
+    const topProject = [...projectSpend].sort((a, b) => b.total_cost - a.total_cost)[0];
+    const activeDays = new Set(dateFiltered.map((entry) => entry.date)).size;
+    const weeklySpendPct = lastWeekSpend > 0 ? ((thisWeekSpend - lastWeekSpend) / lastWeekSpend) * 100 : null;
+
+    return {
+      thisWeekSpend,
+      weeklySpendPct,
+      lastWeekSpend,
+      topProject,
+      topModel,
+      activeDays,
+      averageCost: entries.length ? entries.reduce((sum, entry) => sum + entry.cost, 0) / entries.length : 0,
+    };
+  }, [dateFiltered, entries, projectSpend]);
 
   // Daily spend series for the line chart (ascending by date)
   const dailySpend: DailySpend[] = useMemo(() => {
@@ -394,29 +445,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Date range filter */}
-        <div className="mt-5 flex flex-wrap gap-2">
-          {[
-            { id: "all", label: "All time" },
-            { id: "this_month", label: "This month" },
-            { id: "last_month", label: "Last month" },
-            { id: "3months", label: "Last 3 months" },
-            { id: "6months", label: "Last 6 months" },
-          ].map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => applyPreset(id)}
-              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-                preset === id
-                  ? "border-blue-600 bg-blue-600 text-white"
-                  : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
         {/* Today section */}
         <div className="mt-6">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -451,6 +479,10 @@ export default function Dashboard() {
               }}
             />
             <MetricCard
+              label="This Week Spend"
+              value={usd(today.thisWeekSpend)}
+            />
+            <MetricCard
               label="This Month Spend"
               value={usd(today.thisMonthSpend)}
               trend={{
@@ -462,12 +494,60 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Date range filter */}
+        <div className="mt-6 flex flex-wrap gap-2">
+          {[
+            { id: "all", label: "All time" },
+            { id: "this_week", label: "This week" },
+            { id: "this_month", label: "This month" },
+            { id: "last_month", label: "Last month" },
+            { id: "3months", label: "Last 3 months" },
+            { id: "6months", label: "Last 6 months" },
+          ].map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => applyPreset(id)}
+              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                preset === id
+                  ? "border-blue-600 bg-blue-600 text-white"
+                  : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Top metric cards */}
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard label="Total Spend" value={usd(totals.spend)} />
           <MetricCard label="Total Queries" value={num(totals.queries)} />
           <MetricCard label="Total Input Tokens" value={num(totals.input)} />
           <MetricCard label="Total Output Tokens" value={num(totals.output)} />
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <MetricCard
+            label="This Week Spend"
+            value={usd(highlights.thisWeekSpend)}
+            trend={{
+              pct: highlights.weeklySpendPct,
+              label: highlights.weeklySpendPct === null ? "no prior-week spend" : "vs last week",
+              comparisonValue: highlights.lastWeekSpend > 0 ? `last week: ${usd(highlights.lastWeekSpend)}` : undefined,
+            }}
+          />
+          <MetricCard
+            label="Top Project"
+            value={highlights.topProject?.name ?? "—"}
+            trend={highlights.topProject ? { pct: null, label: usd(highlights.topProject.total_cost) } : undefined}
+          />
+          <MetricCard
+            label="Most Used Model"
+            value={highlights.topModel?.model ?? "—"}
+            trend={highlights.topModel ? { pct: null, label: `${num(highlights.topModel.queries)} queries` } : undefined}
+          />
+          <MetricCard label="Active Days" value={num(highlights.activeDays)} trend={{ pct: null, label: "selected range" }} />
+          <MetricCard label="Avg Cost / Response" value={usd(highlights.averageCost)} trend={{ pct: null, label: "all-time responses" }} />
         </div>
 
         {/* Project spend breakdown */}

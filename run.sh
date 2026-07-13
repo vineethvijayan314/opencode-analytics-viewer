@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -eu
+
+.venv/bin/python -m uvicorn app:app --port 8000 &
+api_pid=$!
+trap 'kill "$api_pid"' EXIT INT TERM
+npm --prefix frontend run dev

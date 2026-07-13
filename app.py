@@ -1,13 +1,14 @@
 """OpenCode analytics API.
 
-Reads ~/.local/share/opencode/opencode.db (real schema: `message` table with
-JSON `data` column; token counts live on assistant messages, prompt text lives
-in the `part` table attached to the parent user message).
+Reads the local OpenCode database. JSON `data` on assistant messages stores
+cost and token counts; `part` rows on parent user messages store prompt text.
 
 Run: uvicorn app:app --reload --port 8000
 """
 
 import json
+import os
+import sys
 import shutil
 import sqlite3
 import subprocess
@@ -17,7 +18,15 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-DB_PATH = Path.home() / ".local" / "share" / "opencode" / "opencode.db"
+def opencode_db_path() -> Path:
+    if sys.platform == "win32":
+        data_home = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    else:
+        data_home = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return data_home / "opencode" / "opencode.db"
+
+
+DB_PATH = opencode_db_path()
 
 # No cost calculation needed — opencode stores real cost per message in $.cost.
 # Models on GitHub Copilot subscription that don't report cost store 0.

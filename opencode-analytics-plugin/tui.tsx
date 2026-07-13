@@ -6,7 +6,10 @@ import { Database } from "bun:sqlite"
 import { createSignal } from "solid-js"
 import type { TuiPlugin } from "@opencode-ai/plugin/tui"
 
-const dbPath = join(homedir(), ".local", "share", "opencode", "opencode.db")
+const dataHome = process.platform === "win32"
+  ? process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local")
+  : process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share")
+const dbPath = join(dataHome, "opencode", "opencode.db")
 
 type Stats = { todayCost: number; weekCost: number; monthCost: number }
 
