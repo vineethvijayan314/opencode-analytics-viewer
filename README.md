@@ -1,5 +1,10 @@
 # OpenCode Analytics Viewer
 
+[![Tests](https://github.com/vineethvijayan314/opencode-analytics-viewer/actions/workflows/windows.yml/badge.svg)](https://github.com/vineethvijayan314/opencode-analytics-viewer/actions/workflows/windows.yml)
+![Backend tests](https://img.shields.io/badge/backend-unittest-3776AB?logo=python&logoColor=white)
+![Frontend tests](https://img.shields.io/badge/frontend-Vitest-6E9F18?logo=vitest&logoColor=white)
+![Plugin tests](https://img.shields.io/badge/plugin-Bun%20Test-FBF0DF?logo=bun&logoColor=black)
+
 A local, read-only dashboard and OpenCode TUI plugin for usage, cost, projects, RTK savings, and Graphify statistics.
 
 Current version: `0.1.0` (unreleased). See [CHANGELOG.md](CHANGELOG.md) for release notes.

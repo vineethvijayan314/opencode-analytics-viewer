@@ -24,6 +24,8 @@ jobs:
             frontend/package-lock.json
             opencode-analytics-plugin/package-lock.json
 
+      - uses: oven-sh/setup-bun@v2
+
       - name: Install
         shell: powershell
         run: .\install.ps1
@@ -32,10 +34,18 @@ jobs:
         shell: powershell
         run: .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 
+      - name: Test frontend
+        working-directory: frontend
+        run: npm test
+
+      - name: Test plugin
+        working-directory: opencode-analytics-plugin
+        run: bun test
+
       - name: Build frontend
         working-directory: frontend
         run: npm run build
 
       - name: Type-check plugin
         working-directory: opencode-analytics-plugin
-        run: npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node,bun --skipLibCheck server.ts tui.tsx
+        run: npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node,bun --skipLibCheck server.ts tui.tsx plugin.test.ts
