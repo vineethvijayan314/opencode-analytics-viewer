@@ -23,7 +23,8 @@ def opencode_db_path() -> Path:
     if configured_path:
         return Path(configured_path).expanduser()
     if sys.platform == "win32":
-        data_home = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        data_home = Path(local_app_data) if local_app_data else Path.home() / "AppData" / "Local"
     else:
         data_home = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
     return data_home / "opencode" / "opencode.db"
