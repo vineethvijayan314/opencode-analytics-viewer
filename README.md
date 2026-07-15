@@ -13,7 +13,7 @@ The dashboard reads the OpenCode database on your machine. It does not upload pr
 
 ## What You Get
 
-- Browser dashboard at `http://localhost:5173`
+- Browser dashboard at `http://localhost:5174`
 - Cost, token, model, project, and query-history views
 - Date filters for today, this week, month, and longer ranges
 - Optional RTK and Graphify sections when those tools are installed
@@ -106,7 +106,7 @@ $env:OPENCODE_DATA_DIR = "$env:LOCALAPPDATA\opencode"
 docker compose up --build
 ```
 
-Open `http://localhost:5173`. The dashboard API remains available at `http://localhost:7123`.
+Open `http://localhost:5174`. The dashboard API remains available at `http://localhost:7123`.
 
 Compose mounts the OpenCode data directory read-only rather than copying it into an image. New sessions and usage data appear after refreshing the dashboard; no image rebuild is needed. Mounting the directory also includes SQLite's `opencode.db-wal` and `opencode.db-shm` files, which keeps active data visible.
 
@@ -126,12 +126,12 @@ On Docker Desktop, allow access to your user home directory if it is not already
 .\run.ps1
 ```
 
-Then open `http://localhost:5173`.
+Then open `http://localhost:5174`.
 
 The helper starts:
 
 - FastAPI API: `http://localhost:7123`
-- Vite dashboard: `http://localhost:5173`
+- Vite dashboard: `http://localhost:5174`
 
 Stop both processes with `Ctrl+C`.
 
