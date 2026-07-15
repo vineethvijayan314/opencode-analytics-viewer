@@ -138,6 +138,9 @@ class AppTests(unittest.TestCase):
         self.assertIn("Push-Location frontend", run_script)
         self.assertIn("npm run dev", run_script)
 
+        workflow = (root / ".github" / "workflows" / "windows.yml").read_text()
+        self.assertIn("--types node,bun", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

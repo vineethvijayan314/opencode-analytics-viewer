@@ -60,14 +60,17 @@ function loadStats(sessionID?: string): Stats {
 const tui: TuiPlugin = async (api) => {
   if (!existsSync(dbPath)) return
 
-  const currentSessionID = () =>
-    api.route.current.name === "session" ? api.route.current.params.sessionID : undefined
+  const currentSessionID = () => {
+    const route = api.route.current
+    if (!("params" in route)) return undefined
+    const sessionID = route.params?.sessionID
+    return typeof sessionID === "string" ? sessionID : undefined
+  }
   const [stats, setStats] = createSignal(loadStats(currentSessionID()))
   const refresh = setInterval(() => setStats(loadStats(currentSessionID())), 5_000)
   api.lifecycle.onDispose(() => clearInterval(refresh))
 
   api.slots.register({
-    id: "opencode-analytics-app-footer",
     order: 0,
     slots: {
       sidebar_footer: () => (

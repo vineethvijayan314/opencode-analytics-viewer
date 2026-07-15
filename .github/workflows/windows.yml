@@ -38,4 +38,4 @@ jobs:
 
       - name: Type-check plugin
         working-directory: opencode-analytics-plugin
-        run: npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node --skipLibCheck server.ts tui.tsx
+        run: npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node,bun --skipLibCheck server.ts tui.tsx

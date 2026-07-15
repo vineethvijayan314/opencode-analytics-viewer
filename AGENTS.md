@@ -16,7 +16,7 @@
 
 - Requires OpenCode `>=1.17.18` and uses separate package exports: `./server` and `./tui`.
 - Register the package in both OpenCode configs: server plugin list in `opencode.jsonc`, TUI plugin list in `tui.json`. TUI changes require an OpenCode restart.
-- Verify plugin sources with: `npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node --skipLibCheck server.ts tui.tsx` from `opencode-analytics-plugin/`.
+- Verify plugin sources with: `npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node,bun --skipLibCheck server.ts tui.tsx` from `opencode-analytics-plugin/`.
 
 ## Verify
 
