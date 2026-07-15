@@ -7,7 +7,7 @@
 
 A local, read-only dashboard and OpenCode TUI plugin for usage, cost, projects, RTK savings, and Graphify statistics.
 
-Current version: `0.1.0` (unreleased). See [CHANGELOG.md](CHANGELOG.md) for release notes.
+Current version: `0.1.0`, the first release. See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 The dashboard reads the OpenCode database on your machine. It does not upload prompts, token data, costs, or database contents.
 
