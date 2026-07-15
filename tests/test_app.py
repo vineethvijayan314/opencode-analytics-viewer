@@ -127,12 +127,16 @@ class AppTests(unittest.TestCase):
 
         self.assertEqual(path, Path("C:/Users/test/AppData/Local/opencode/opencode.db"))
 
-    def test_windows_scripts_use_equals_form_for_npm_prefix(self):
+    def test_windows_scripts_run_npm_in_each_package_directory(self):
         root = Path(__file__).parent.parent
-        for script in (root / "install.ps1", root / "run.ps1"):
-            content = script.read_text()
-            self.assertNotIn("npm --prefix ", content)
-            self.assertIn("npm --prefix=", content)
+        install_script = (root / "install.ps1").read_text()
+        self.assertIn("Push-Location frontend", install_script)
+        self.assertIn("Push-Location opencode-analytics-plugin", install_script)
+        self.assertNotIn("npm --prefix", install_script)
+
+        run_script = (root / "run.ps1").read_text()
+        self.assertIn("Push-Location frontend", run_script)
+        self.assertIn("npm run dev", run_script)
 
 
 if __name__ == "__main__":
