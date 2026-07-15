@@ -33,7 +33,7 @@ jobs:
         run: .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 
       - name: Build frontend
-        run: npm --prefix frontend run build
+        run: npm --prefix=frontend run build
 
       - name: Type-check plugin
         working-directory: opencode-analytics-plugin

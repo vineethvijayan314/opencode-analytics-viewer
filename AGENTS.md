@@ -3,7 +3,7 @@
 ## Run
 
 - Backend: `.venv/bin/uvicorn app:app --reload --port 7123`.
-- Frontend: `npm --prefix frontend run dev` serves Vite on `http://localhost:5173`.
+- Frontend: `npm --prefix=frontend run dev` serves Vite on `http://localhost:5173`.
 - The dashboard and API use port `7123` by default. Keep them aligned when changing startup/configuration.
 
 ## Architecture
@@ -20,5 +20,5 @@
 
 ## Verify
 
-- Frontend: `npm --prefix frontend run build`.
+- Frontend: `npm --prefix=frontend run build`.
 - The application reads a user-local database; do not add sample data or write migrations against it.

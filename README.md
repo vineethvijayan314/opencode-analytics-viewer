@@ -196,14 +196,14 @@ The frontend expects the API at `http://localhost:7123` by default. To use a dif
 macOS/Linux example:
 
 ```bash
-VITE_API_URL=http://localhost:9000 npm --prefix frontend run dev
+VITE_API_URL=http://localhost:9000 npm --prefix=frontend run dev
 ```
 
 Windows PowerShell example:
 
 ```powershell
 $env:VITE_API_URL = "http://localhost:9000"
-npm --prefix frontend run dev
+npm --prefix=frontend run dev
 ```
 
 ## Troubleshooting
@@ -221,7 +221,7 @@ npm --prefix frontend run dev
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -v
-npm --prefix frontend run build
+npm --prefix=frontend run build
 npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node --skipLibCheck opencode-analytics-plugin/server.ts opencode-analytics-plugin/tui.tsx
 ```
 
