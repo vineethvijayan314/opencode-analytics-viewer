@@ -10,6 +10,9 @@
   "engines": {
     "opencode": ">=1.17.18"
   },
+  "scripts": {
+    "test": "bun test"
+  },
   "dependencies": {
     "@opencode-ai/plugin": "1.17.18",
     "@opentui/core": "0.4.3",

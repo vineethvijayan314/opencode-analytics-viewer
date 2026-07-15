@@ -4,7 +4,10 @@ import { join } from "node:path"
 import { Database } from "bun:sqlite"
 import { tool, type Plugin } from "@opencode-ai/plugin"
 
-const dbPath = join(homedir(), ".local", "share", "opencode", "opencode.db")
+const dataHome = process.platform === "win32"
+  ? process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local")
+  : process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share")
+const dbPath = process.env.OPENCODE_DB_PATH ?? join(dataHome, "opencode", "opencode.db")
 
 type Analytics = {
   todayTokens: number

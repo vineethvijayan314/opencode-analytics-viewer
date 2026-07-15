@@ -4,7 +4,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import app
 from fastapi import HTTPException
@@ -117,6 +117,83 @@ class AppTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 500)
         self.assertIn("Database not found", raised.exception.detail)
+
+    def test_rtk_savings_returns_cli_report(self):
+        report = {"summary": {"total_saved": 123}}
+        completed = MagicMock(stdout=json.dumps(report))
+
+        with (
+            patch.object(app.shutil, "which", return_value="/usr/local/bin/rtk"),
+            patch.object(app.subprocess, "run", return_value=completed) as run,
+        ):
+            result = app.get_rtk_savings()
+
+        self.assertEqual(result, report)
+        run.assert_called_once_with(
+            ["/usr/local/bin/rtk", "gain", "--format", "json", "--all"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+
+    def test_rtk_savings_reports_missing_binary(self):
+        with patch.object(app.shutil, "which", return_value=None):
+            with self.assertRaises(HTTPException) as raised:
+                app.get_rtk_savings()
+
+        self.assertEqual(raised.exception.status_code, 404)
+
+    def test_rtk_savings_reports_invalid_output(self):
+        with (
+            patch.object(app.shutil, "which", return_value="rtk"),
+            patch.object(app.subprocess, "run", return_value=MagicMock(stdout="not json")),
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                app.get_rtk_savings()
+
+        self.assertEqual(raised.exception.status_code, 500)
+        self.assertIn("rtk error", raised.exception.detail)
+
+    def test_graphify_stats_returns_empty_report_without_graphs(self):
+        home = MagicMock()
+        home.glob.return_value = []
+
+        with (
+            patch.object(app.shutil, "which", return_value="graphify"),
+            patch.object(app.Path, "home", return_value=home),
+        ):
+            result = app.get_graphify_stats()
+
+        self.assertEqual(result, {"graphs": [], "total_graphs": 0})
+
+    def test_graphify_stats_parses_benchmark_report(self):
+        graph_file = self.db_path.parent / "work" / "demo" / "graphify-out" / "graph.json"
+        home = MagicMock()
+        home.glob.return_value = [graph_file]
+        output = """Corpus: 306,850 words → ~409,133 tokens (naive)
+Graph: 6,137 nodes, 10,189 edges
+Avg query cost: ~25,100 tokens
+Reduction: 16.3x fewer tokens per query"""
+
+        with (
+            patch.object(app.shutil, "which", return_value="graphify"),
+            patch.object(app.Path, "home", return_value=home),
+            patch.object(app.subprocess, "run", return_value=MagicMock(stdout=output)),
+        ):
+            result = app.get_graphify_stats()
+
+        self.assertEqual(result["total_graphs"], 1)
+        self.assertEqual(
+            result["graphs"][0],
+            {
+                "path": str(graph_file.parent.parent),
+                "corpus_tokens": 409133,
+                "nodes": 6137,
+                "edges": 10189,
+                "avg_query_tokens": 25100,
+                "reduction_x": 16.3,
+            },
+        )
 
     def test_database_path_uses_windows_local_app_data(self):
         with (

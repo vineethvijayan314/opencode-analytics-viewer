@@ -9,7 +9,7 @@ import type { TuiPlugin } from "@opencode-ai/plugin/tui"
 const dataHome = process.platform === "win32"
   ? process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local")
   : process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share")
-const dbPath = join(dataHome, "opencode", "opencode.db")
+const dbPath = process.env.OPENCODE_DB_PATH ?? join(dataHome, "opencode", "opencode.db")
 
 type Stats = {
   sessionCost: number
@@ -20,7 +20,7 @@ type Stats = {
   lastUsedCost: number
 }
 
-function loadStats(sessionID?: string): Stats {
+export function loadStats(sessionID?: string): Stats {
   const db = new Database(dbPath, { readonly: true })
   try {
     return db.query<Stats, [string]>(`
@@ -57,15 +57,17 @@ function loadStats(sessionID?: string): Stats {
   }
 }
 
+export function sessionIDFromRoute(route: unknown): string | undefined {
+  if (!route || typeof route !== "object" || !("params" in route)) return undefined
+  const params = route.params
+  if (!params || typeof params !== "object" || !("sessionID" in params)) return undefined
+  return typeof params.sessionID === "string" ? params.sessionID : undefined
+}
+
 const tui: TuiPlugin = async (api) => {
   if (!existsSync(dbPath)) return
 
-  const currentSessionID = () => {
-    const route = api.route.current
-    if (!("params" in route)) return undefined
-    const sessionID = route.params?.sessionID
-    return typeof sessionID === "string" ? sessionID : undefined
-  }
+  const currentSessionID = () => sessionIDFromRoute(api.route.current)
   const [stats, setStats] = createSignal(loadStats(currentSessionID()))
   const refresh = setInterval(() => setStats(loadStats(currentSessionID())), 5_000)
   api.lifecycle.onDispose(() => clearInterval(refresh))
