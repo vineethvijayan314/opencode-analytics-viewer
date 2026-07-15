@@ -12,8 +12,8 @@ The dashboard reads the OpenCode database on your machine. It does not upload pr
 - Cost, token, model, project, and query-history views
 - Date filters for today, this week, month, and longer ranges
 - Optional RTK and Graphify sections when those tools are installed
-- OpenCode sidebar cost totals for today, this Monday-start week, and month
-- OpenCode footer total for today
+- OpenCode sidebar costs for the current session, today, the last prior day used, this Monday-start week, and month
+- OpenCode footer costs for the current session and today
 - `analytics` tool for agent cost, token, and response totals
 
 ## Requirements
@@ -23,14 +23,18 @@ The dashboard reads the OpenCode database on your machine. It does not upload pr
 - Python `>=3.10`
 - Git, if cloning from a repository
 
+Docker Desktop is an alternative to the Node.js and Python requirements for the dashboard.
+
 RTK and Graphify are optional. The dashboard works without either; their sections are simply hidden.
+
+These integrations require the commands to be installed in the same environment as the API. Host-installed RTK and Graphify commands are not available inside the default Docker API image, so their dashboard sections remain hidden when using Compose.
 
 ## Install
 
-Clone the repository and enter it:
+Clone the repository using its URL from your Git host, then enter it:
 
 ```bash
-git clone <repository-url> opencode-analytics-viewer
+git clone REPOSITORY_URL opencode-analytics-viewer
 cd opencode-analytics-viewer
 ```
 
@@ -79,13 +83,39 @@ The update script fast-forwards to the latest release on the current branch and 
 
 ## Start the Dashboard
 
-### macOS and Linux
+### Docker (macOS, Linux, and Windows)
+
+Install and start Docker Desktop, then point Compose at the directory that contains `opencode.db`:
+
+macOS/Linux:
+
+```bash
+export OPENCODE_DATA_DIR="$HOME/.local/share/opencode"
+docker compose up --build
+```
+
+Windows PowerShell:
+
+```powershell
+$env:OPENCODE_DATA_DIR = "$env:LOCALAPPDATA\opencode"
+docker compose up --build
+```
+
+Open `http://localhost:5173`. The dashboard API remains available at `http://localhost:7123`.
+
+Compose mounts the OpenCode data directory read-only rather than copying it into an image. New sessions and usage data appear after refreshing the dashboard; no image rebuild is needed. Mounting the directory also includes SQLite's `opencode.db-wal` and `opencode.db-shm` files, which keeps active data visible.
+
+On Docker Desktop, allow access to your user home directory if it is not already shared. Stop the services with `Ctrl+C`; add `-d` to run them in the background.
+
+### Native
+
+#### macOS and Linux
 
 ```bash
 ./run.sh
 ```
 
-### Windows PowerShell
+#### Windows PowerShell
 
 ```powershell
 .\run.ps1
@@ -113,12 +143,12 @@ Add the plugin entries to your existing config. Do not replace other plugins or 
 
 ### Server Plugin
 
-Add the repository's absolute plugin directory to `plugin` in `opencode.jsonc`:
+Add the server source file to `plugin` in `opencode.jsonc`:
 
 ```jsonc
 {
   "plugin": [
-    "file:///absolute/path/to/opencode-analytics-viewer/opencode-analytics-plugin"
+    "file:///absolute/path/to/opencode-analytics-viewer/opencode-analytics-plugin/server.ts"
   ]
 }
 ```
@@ -138,11 +168,14 @@ Add the TUI source file to `plugin` in `tui.json`, then enable its ID:
 }
 ```
 
-On Windows, use your OpenCode configuration directory and a file URL with forward slashes:
+On Windows, use your OpenCode configuration directory and file URLs with forward slashes:
 
 ```text
+file:///C:/Users/your-name/path/to/opencode-analytics-viewer/opencode-analytics-plugin/server.ts
 file:///C:/Users/your-name/path/to/opencode-analytics-viewer/opencode-analytics-plugin/tui.tsx
 ```
+
+The TUI plugin supports the Windows OpenCode data directory. The server plugin currently reads `~/.local/share/opencode/opencode.db`, so its `analytics` tool is available only when the database exists at that path.
 
 Quit and restart OpenCode after editing its config. The TUI plugin refreshes displayed costs every five seconds.
 
@@ -179,6 +212,7 @@ npm --prefix frontend run dev
 | --- | --- |
 | Dashboard says it cannot reach the API | Run `./run.sh` or `.\run.ps1`; confirm `http://localhost:7123/api/metrics` responds. |
 | Dashboard has no data | OpenCode must have created its local database by running at least one session. |
+| Compose says `OPENCODE_DATA_DIR` is required | Set it to the directory containing `opencode.db`, then rerun `docker compose up --build`. |
 | Sidebar/footer not visible | Verify both plugin config entries, then completely quit and restart OpenCode. |
 | RTK or Graphify section missing | This is expected unless the corresponding command is installed and available on `PATH`. |
 | Port `7123` is already in use | Stop the process using it or set `VITE_API_URL` and start Uvicorn on another matching port. |
@@ -186,9 +220,12 @@ npm --prefix frontend run dev
 ## Verify Changes
 
 ```bash
+.venv/bin/python -m unittest discover -s tests -v
 npm --prefix frontend run build
 npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node --skipLibCheck opencode-analytics-plugin/server.ts opencode-analytics-plugin/tui.tsx
 ```
+
+On Windows, replace `.venv/bin/python` with `.\.venv\Scripts\python.exe`. GitHub Actions runs the installer, API tests, frontend build, and plugin type-check on `windows-latest` for every push and pull request. This validates installation and builds, but does not exercise the plugin inside a running OpenCode TUI.
 
 ## Privacy
 

@@ -1,0 +1,22 @@
+services:
+  api:
+    build:
+      context: .
+      target: api
+    environment:
+      OPENCODE_DB_PATH: /opencode-data/opencode.db
+    volumes:
+      - ${OPENCODE_DATA_DIR:?Set OPENCODE_DATA_DIR to your OpenCode data directory}:/opencode-data:ro
+    ports:
+      - "7123:7123"
+
+  dashboard:
+    build:
+      context: .
+      target: frontend
+      args:
+        VITE_API_URL: /
+    depends_on:
+      - api
+    ports:
+      - "5173:80"

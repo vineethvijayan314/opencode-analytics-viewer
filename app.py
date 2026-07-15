@@ -19,6 +19,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 def opencode_db_path() -> Path:
+    configured_path = os.environ.get("OPENCODE_DB_PATH")
+    if configured_path:
+        return Path(configured_path).expanduser()
     if sys.platform == "win32":
         data_home = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
     else:

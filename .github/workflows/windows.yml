@@ -1,0 +1,40 @@
+name: Windows
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  install-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            opencode-analytics-plugin/package-lock.json
+
+      - name: Install
+        shell: powershell
+        run: .\install.ps1
+
+      - name: Test API
+        shell: powershell
+        run: .\.venv\Scripts\python.exe -m unittest discover -s tests -v
+
+      - name: Build frontend
+        run: npm --prefix frontend run build
+
+      - name: Type-check plugin
+        working-directory: opencode-analytics-plugin
+        run: npx tsc --noEmit --jsx preserve --module nodenext --moduleResolution nodenext --target esnext --types node --skipLibCheck server.ts tui.tsx

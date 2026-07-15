@@ -10,7 +10,7 @@
 
 - `app.py` is a read-only FastAPI adapter over `~/.local/share/opencode/opencode.db`. Assistant message costs/tokens are JSON fields in `message.data`; user prompt text comes from `part` rows linked to the parent message.
 - `frontend/src/Dashboard.tsx` is the React dashboard and aggregates `/api/metrics` client-side. Its cost cards are global across all OpenCode projects.
-- `opencode-analytics-plugin/server.ts` supplies the agent `analytics` tool. `tui.tsx` supplies the sidebar footer. Both intentionally aggregate global assistant-message data; retain matching calendar boundaries (day, Monday-start week, month).
+- `opencode-analytics-plugin/server.ts` supplies the agent `analytics` tool. `tui.tsx` supplies sidebar and app-bottom footers; its sidebar shows current-session cost plus global day, last-used-day, Monday-start-week, and month totals. Retain the existing calendar boundaries.
 
 ## Plugin
 

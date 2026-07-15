@@ -115,7 +115,7 @@ const MODEL_COLORS = [
   "#4f46e5", "#be185d", "#047857", "#c2410c", "#1d4ed8", "#6d28d9",
 ];
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:7123";
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:7123").replace(/\/$/, "");
 const API_URL = `${API_BASE_URL}/api/metrics`;
 const RTK_URL = `${API_BASE_URL}/api/rtk-savings`;
 const GRAPHIFY_URL = `${API_BASE_URL}/api/graphify-stats`;
@@ -172,6 +172,11 @@ function MetricCard({
 // ---------- Main component ----------
 
 export default function Dashboard() {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const saved = localStorage.getItem("opencode-analytics-theme");
+    if (saved === "light" || saved === "dark") return saved;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
   const [entries, setEntries] = useState<MetricEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +191,15 @@ export default function Dashboard() {
   const [rtkView, setRtkView] = useState<"daily" | "weekly" | "monthly">("monthly");
   const [graphifyStats, setGraphifyStats] = useState<GraphifyStatsResponse | null>(null);
   const [projectSpend, setProjectSpend] = useState<ProjectSpend[]>([]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("opencode-analytics-theme", theme);
+  }, [theme]);
+
+  const chartColors = theme === "dark"
+    ? { grid: "#334155", text: "#94a3b8", tooltip: "#e2e8f0" }
+    : { grid: "#e2e8f0", text: "#64748b", tooltip: "#0f172a" };
 
   function applyPreset(p: string) {
     setPreset(p);
@@ -432,14 +446,27 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-8">
       <div className="mx-auto max-w-6xl">
-        <h1 className="text-2xl font-bold text-slate-900">
-          OpenCode Analytics
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Query history, token usage, and real cost from your local OpenCode
-          database. Cost is stored per message by OpenCode — models on Copilot
-          subscription report $0.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              OpenCode Analytics
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Query history, token usage, and real cost from your local OpenCode
+              database. Cost is stored per message by OpenCode — models on Copilot
+              subscription report $0.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="shrink-0 rounded-lg border border-slate-300 bg-white p-2 text-slate-600 transition-colors hover:border-slate-400"
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          >
+            {theme === "dark" ? "☀" : "☾"}
+          </button>
+        </div>
 
         {error && (
           <div className="mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -669,15 +696,15 @@ export default function Dashboard() {
               <div className="mt-4 h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={rtkData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                     <XAxis
                       dataKey="_key"
-                      tick={{ fontSize: rtkView === "daily" ? 10 : 12, fill: "#64748b" }}
+                      tick={{ fontSize: rtkView === "daily" ? 10 : 12, fill: chartColors.text }}
                       tickMargin={8}
                       interval={rtkView === "daily" ? "preserveStartEnd" : 0}
                     />
                     <YAxis
-                      tick={{ fontSize: 12, fill: "#64748b" }}
+                      tick={{ fontSize: 12, fill: chartColors.text }}
                       tickFormatter={(v: number) =>
                         v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}K` : String(v)
                       }
@@ -692,7 +719,7 @@ export default function Dashboard() {
                         }
                         return label;
                       }}
-                      labelStyle={{ color: "#0f172a", fontWeight: 600 }}
+                      labelStyle={{ color: chartColors.tooltip, fontWeight: 600 }}
                     />
                     <Bar dataKey="saved_tokens" fill="#059669" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -724,20 +751,20 @@ export default function Dashboard() {
                 data={dailySpend}
                 margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontSize: 12, fill: chartColors.text }}
                   tickMargin={8}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontSize: 12, fill: chartColors.text }}
                   tickFormatter={(v: number) => `$${v}`}
                   width={70}
                 />
                 <Tooltip
                   formatter={(value: number) => [usd(value), "Spend"]}
-                  labelStyle={{ color: "#0f172a", fontWeight: 600 }}
+                  labelStyle={{ color: chartColors.tooltip, fontWeight: 600 }}
                 />
                 <Line
                   type="monotone"
@@ -764,16 +791,16 @@ export default function Dashboard() {
                 layout="vertical"
                 margin={{ top: 4, right: 24, bottom: 4, left: 8 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} horizontal={false} />
                 <XAxis
                   type="number"
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontSize: 12, fill: chartColors.text }}
                   tickFormatter={(v: number) => num(v)}
                 />
                 <YAxis
                   type="category"
                   dataKey="model"
-                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  tick={{ fontSize: 11, fill: chartColors.text }}
                   width={160}
                 />
                 <Tooltip
@@ -782,7 +809,7 @@ export default function Dashboard() {
                       ? [num(value), "Queries"]
                       : [usd(value), "Spend"]
                   }
-                  labelStyle={{ color: "#0f172a", fontWeight: 600 }}
+                  labelStyle={{ color: chartColors.tooltip, fontWeight: 600 }}
                 />
                 <Bar dataKey="queries" radius={[0, 4, 4, 0]}>
                   {modelUsage.map((_, index) => (
